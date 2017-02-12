@@ -1,0 +1,28 @@
+[rerere]
+	enabled = true
+[push]
+	default = simple
+[core]
+	autocrlf = true
+    editor = \"c:/Program Files (x86)/Emacs-24.5/bin/emacsclientw.exe\"
+[status]
+	submodulesummary = 1
+[difftool "ediff"]
+    cmd = \"c:/Program Files (x86)/Emacs-24.5/bin/emacs.exe\" --eval \
+       \"(ediff-files \\\"$LOCAL\\\" \\\"$REMOTE\\\")\"
+[mergetool "ediff"]
+    cmd = \"c:/Program Files (x86)/Emacs-24.5/bin/emacs.exe\" --eval \"\
+(progn\
+  (defun ediff-write-merge-buffer ()\
+    (let ((file ediff-merge-store-file))\
+      (set-buffer ediff-buffer-C)\
+      (write-region (point-min) (point-max) file)\
+      (message \\\"Merge buffer saved in: %s\\\" file)\
+      (set-buffer-modified-p nil)\
+      (sit-for 1)))\
+  (setq ediff-quit-hook 'kill-emacs\
+        ediff-quit-merge-hook 'ediff-write-merge-buffer)\
+  (ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\"\
+                                   \\\"$BASE\\\" nil \\\"$MERGED\\\"))\"
+[merge]
+    tool = ediff

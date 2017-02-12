@@ -1,0 +1,4 @@
+# Default behavior
+* text=auto
+
+.bashrc text eol=lf
