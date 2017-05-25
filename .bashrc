@@ -2,7 +2,6 @@
 # path
 # ------------------------
 
-
 # Some shells will use /cygdrive/c, others will just use /c
 root_path=/c
 cygdrive=/cygdrive/c
@@ -22,9 +21,10 @@ PATH=$PATH:`cygpath -S`
 PATH=$PATH:`cygpath -W`
 PATH=$PATH:$root_path/usersoftware
 #PATH="$root_path/MinGW/bin:$root_path/MinGW/msys/1.0/bin:$PATH"
+PATH=$PATH:"$root_path/Program Files/PuTTY"
 PATH="$root_path/Program Files (x86)/CMake/bin:$PATH"
 PATH="$PATH:$root_path/Python27/Scripts"
-
+PATH="$PATH:$root_path/Program Files (x86)/GNU/GnuPG"
 # replace any cygdrive paths with the root path
 PATH=$(echo $PATH | sed -e s^$cygdrive^$root_path^g)
 
@@ -37,29 +37,36 @@ export PS1="\e[0;32m\u@\h\e[m \e[0;33m\w\e[m\n\$ "
 
 
 export PATH;
+export GIT="$root_path/Program Files (x86)/Git/bin/git.exe"
 
 # need quotes in the following around path in case it contains special characters
 alias mingw_mode="PATH=\"$root_path/MinGW/bin:$root_path/MinGW/msys/1.0/bin:$PATH\""
 alias grep="/usr/bin/grep $GREP_OPTIONS"
-alias git="$root_path/Program\ Files\ \(x86\)/Git/bin/git.exe"
+alias git="\"$GIT\""
 alias firefox="$root_path/Program\ Files\ \(x86\)/Mozilla\ Firefox/firefox.exe"
 
 # Unlimited log decorated and graphed
-alias guldg="git log --decorate --graph --color"
+alias guldg="git log --decorate --graph --color --date-order"
 # Limited to 20 entries
 alias gldg="guldg -20"
 
 alias guldgo="guldg --oneline --format=\"%C(auto)%h %d %ar - %an: %s\""
 alias gldgo="gldg --oneline --format=\"%C(auto)%h %d %ar - %an: %s\""
+alias gldgot="gldgo --topo-order"
+alias gl="gldgo"
 
 alias gstat="git status -uno"
-alias gfetch="git fetch --progress -v"
+alias gs="gstat"
+alias gfetch="git fetch --progress"
+alias gf="gfetch"
 alias gwhere="gstat && gldgo"
 alias gsupdate="git submodule update --recursive --init"
+alias gpushm="git push --recurse-submodules=on-demand"
 
 # We always want the /usr/bin versions of these
 alias ls="/usr/bin/ls"
 alias which="/usr/bin/which"
+
 unset GREP_OPTIONS
 
 # Change/List directory
@@ -75,7 +82,7 @@ showdiff1() {
             git diff -w --cached > $fname
             ;;
         *)
-            git show -w $2 > $fname
+            git show -m -w $2 > $fname
             ;;
     esac
     return 0
@@ -89,6 +96,9 @@ showdiff() {
     fname=temp$RANDOM.diff
     retval=0
     case "x$#" in
+        "x0")
+            showdiff1 $fname "working"
+            ;;
         "x1")
             showdiff1 $fname $1
             retval=$?
@@ -106,70 +116,40 @@ showdiff() {
         echo "showdiff: Something went wrong"
         return $retval
     fi
-    (emacsclient $fname && rm $fname) &
+    (emacsclient -n $fname > /dev/null 2>&1 && rm $fname) &
     return 0
 }
-
-grebase() {
-    gecho() {
-        echo "grebase: $*"
-        return 0;
-    }
-
-    col_num() {
-        echo $2 | awk '{ print $'$1' }'
-    }
-    local orig_branch_str=`git status -uno | grep "On branch"`
-    local orig_branch_name=`col_num 3 "$orig_branch_str"`
-
-    git fetch
-    if test $? -ne 0; then
-        gecho "Error fetching from git"
+find_duplicate_branches() {
+    func=${FUNCNAME[0]}
+    if [ $# -ne 1 ]; then
+        echo "Usage: $func branch_on_remote"
+        echo "    $func origin/master"
         return 1
     fi
-
-    stash_msg=$(git stash save)
-    if test $? -ne 0; then
-        gecho "Stash failed"
-        return 1
-    fi
-    gecho $stash_msg
-    stashed=1
-    if [[ x$stash_msg == "xNo local changes to save" ]]; then
-        stashed=0
-    fi
-
-    local branches=${*:-irts_dev1 irts_dev2}
-    for branch in $branches; do
-        echo $branch
-        git checkout $branch && git rebase
-        if test $? -ne 0; then
-            gecho "Error rebasing branch $branch"
-            return 1
+    target_branch=$1
+    all_branches=
+    for branch in `git branch --all | grep --invert "\(\*\|\->\)"`; do
+        on_target=`git branch --all --contains $branch | grep "$target_branch"`
+        if [ "x$on_target" != "x" ]; then
+            echo "$func: Found fully-merged branch: $branch"
+            echo "$func: It is also on the following branches..."
+            git branch --remote --contains $branch
+            if [ -z "$all_branches" ]; then
+                all_branches="$branch"
+            else
+                all_branches=$(printf '%s\n%s' "$all_branches" "$branch")
+            fi
+            echo
         fi
     done
-    gecho "Checking-out original branch $orig_branch_name"
-    git checkout $orig_branch_name
-    if test $? -ne 0; then
-        gecho "Error checking out original branch: $orig_branch_name"
-        gecho "Reapply stashed changes manually"
-        return 1
-    fi
-
-    stash_pop_res=0
-    if [[ $stashed == 1 ]]; then
-        echo
-        gecho "Popping from previously saved stash"
-        git stash pop -q
-        stash_pop_res=$?
-        if [[ $stash_pop_res -ne 0 ]]; then
-            gecho "Failed to apply stash."
-        fi
-    else
-        echo
-        gecho "No stash pop required"
-    fi
-
-    gwhere $branches
-    return $stash_pop_res
+    echo "$func: Summary of fully merged branches:"
+    printf '%s\n' "$all_branches"
+    return 0;
+}
+git_oldest_ancestor() {
+    diff --old-line-format='' --new-line-format='' \
+         <(git rev-list --since=1.year --first-parent "${1:-master}") \
+         <(git rev-list --since=1.year --first-parent "${2:-HEAD}") | \
+        head -1
+    return 0;
 }

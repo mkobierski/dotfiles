@@ -4,14 +4,14 @@
 	default = simple
 [core]
 	autocrlf = true
-    editor = \"c:/Program Files (x86)/Emacs-24.5/bin/emacsclientw.exe\"
+    editor = \"c:/Program Files/Emacs-25.1-2/bin/emacsclientw.exe\"
 [status]
 	submodulesummary = 1
 [difftool "ediff"]
-    cmd = \"c:/Program Files (x86)/Emacs-24.5/bin/emacs.exe\" --eval \
+    cmd = \"c:/Program Files/Emacs-25.1-2/bin/emacs.exe\" --eval \
        \"(ediff-files \\\"$LOCAL\\\" \\\"$REMOTE\\\")\"
 [mergetool "ediff"]
-    cmd = \"c:/Program Files (x86)/Emacs-24.5/bin/emacs.exe\" --eval \"\
+    cmd = \"c:/Program Files/Emacs-25.1-2/bin/emacs.exe\" --eval \"\
 (progn\
   (defun ediff-write-merge-buffer ()\
     (let ((file ediff-merge-store-file))\

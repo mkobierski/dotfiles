@@ -68,6 +68,10 @@
 ; Multiple cursors
 (require 'multiple-cursors)
 
+; Sublime text similes
+;; (require 'sublimity)
+;; (require 'sublimity-scroll)
+;; (require 'sublimity-map)
 
 ; Show columns
 (define-globalized-minor-mode global-column-number-mode
@@ -136,6 +140,8 @@
 (global-set-key (kbd "M-`") 'my-jump-to-mark)
 (global-set-key (kbd "M-i") 'my-ido-goto-symbol)
 (global-set-key (kbd "C-M-z") 'exit-recursive-edit)
+(global-set-key (kbd "C-x k") 'kill-this-buffer)
+
 
 (define-key global-map
   [remap exchange-point-and-mark] 'my-exchange-point-and-mark-no-activate)

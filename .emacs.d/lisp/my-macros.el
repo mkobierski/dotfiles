@@ -169,6 +169,14 @@ Works with: inline-open."
         (c-hungry-delete-backwards)
         (just-one-space))))
 
+(defun my-handle-comment-indentation (langelem)
+  (save-excursion
+    (back-to-indentation)
+    (let ((at-comment-end (looking-at "*/")))
+      (if at-comment-end
+          0
+        '*))))
+
 (defun my-tags-apropos (regexp)
   "Display list of all tags in tags table REGEXP matches."
   (interactive (find-tag-interactive "Tags apropos (regexp): "))
@@ -199,3 +207,81 @@ Works with: inline-open."
   (interactive "DDirectory: ")
   (let ((all-tags-files (directory-files dir t "TAGS[0-9]+")))
     (my-read-tags-one (car all-tags-files) (cdr all-tags-files))))
+
+(defun my-c-shift-parens ()
+  "Moves the opening and closing brackets of C code to the right margin,
+allowing for more concise code.
+
+Ex.
+
+Before:
+
+if(condition) {
+    auto params = get_params();
+    result = run_code(params);
+}
+return result;
+
+After:
+
+if(condition)                                                                  {
+    auto params = get_params();
+    result = run_code(params);                                                 }
+return result;
+
+"
+  (interactive)
+  (save-excursion
+    (save-restriction
+      (beginning-of-line)
+      (let ((begin (point))
+            (end (progn
+                   (end-of-line)
+                   (point))))
+        (narrow-to-region begin end)
+        (end-of-line)
+        (just-one-space)
+        (c-electric-backspace 1)
+        (backward-char)
+        (if (or (eq (char-after) ?{)
+                (eq (char-after) ?}))
+            (progn
+              (skip-chars-backward " \t")
+              (just-one-space (- 79 (current-column)))))))))
+
+
+;; Behave like vi's o command
+(defun my-open-next-line (arg)
+  "Move to the next line and then opens a line.
+    See also `newline-and-indent'."
+  (interactive "p")
+  (end-of-line)
+  (open-line arg)
+  (next-line 1)
+  (when newline-and-indent
+    (indent-according-to-mode)))
+
+(defun my-windowsify-path (pathname &optional use-quotes)
+  (unless (> (length pathname) 0)
+    (error "Directory must have positive length"))
+  (unless (not (string-match pathname "\""))
+    (error "Pathname provided contains a quote (\")"))
+  (let ((new-pathname pathname))
+    (progn
+      (if use-quotes
+          (setq new-pathname (concat "\"" pathname "\"")))
+      (setq new-pathname
+            (replace-regexp-in-string "~" (getenv "HOME") new-pathname nil t))
+      (setq new-pathname
+            (replace-regexp-in-string "/" "\\" new-pathname nil t))
+      (if (and (> (string-width new-pathname) 1)
+               (equal (substring new-pathname -1) "\\"))
+          (substring new-pathname 0 -1)
+        new-pathname))))
+
+(defun my-open-in-explorer (directory)
+  "Opens the current file in Windows Explorer."
+  (interactive "D")
+  (setq directory (my-windowsify-path directory))
+  (start-process "asdf" nil "explorer.exe" directory))
+
