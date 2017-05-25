@@ -17,6 +17,9 @@
   (add-to-list 'package-archives '("gnu" ."http://elpa.gnu.org/packages/")))
 (package-initialize)
 
+(require 'dos-w32)
+(setq null-device "c:/temp/emacs-dev-null.txt")
+
 ; Load all libraries in emacs.d/lisp
 (add-to-list 'load-path "~/.emacs.d/lisp")
 
@@ -43,7 +46,7 @@
 ; --------
 ; Linum
 (require 'linum-relative)
-(global-linum-mode)
+(linum-relative-global-mode)
 
 ; Fill column indicator
 (require 'fill-column-indicator)
@@ -109,6 +112,13 @@
           (lambda() (local-set-key  (kbd "C-c C-z") 'recompile)))
 (add-hook 'python-mode-hook
           (lambda() (local-set-key  (kbd "C-c C-d") 'python-shell-switch-to-shell)))
+(add-hook 'python-mode-hook
+          (lambda() (local-set-key  (kbd "<C-backspace>") 'backward-kill-word)))
+(add-hook 'python-mode-hook 'subword-mode)
+
+; Matlab
+(add-hook 'matlab-mode-hook
+          (lambda() (local-set-key  (kbd "C-c C-z") 'recompile)))
 
 ;; For subprocesses invoked via the shell
 ;; (e.g., "shell -c command")
@@ -119,10 +129,18 @@
 ;(add-to-list 'comint-coutput-filter-functions 'ansi-color-process-output)
 
 ; Python
-(setq-default python-shell-interpreter "c:/python27/python.exe")
+; (setq-default python-shell-interpreter "c:/python27/python.exe")
 
 ; CTags
 (setq-default path-to-ctags "/cygdrive/c/usersoftware/ctags")
+
+; Diff mode (it binds M-o, but I don't want that)
+(add-hook 'diff-mode-hook
+          (lambda() (define-key diff-mode-map (kbd "M-o") nil)))
+(add-hook 'ibuffer-mode-hook
+          (lambda() (define-key ibuffer-mode-map (kbd "M-o") nil)))
+; Text mode hook
+(add-hook 'text-mode-hook 'auto-fill-mode)
 
 ; Additional hooks
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
@@ -141,8 +159,14 @@
 (global-set-key (kbd "M-i") 'my-ido-goto-symbol)
 (global-set-key (kbd "C-M-z") 'exit-recursive-edit)
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
-
-
+(global-set-key (kbd "M-o") 'other-window)
+(global-set-key (kbd "C-c C-e") 'my-open-in-explorer)
+(global-set-key (kbd "C-M-l") 'beginning-of-buffer)
+(global-set-key (kbd "C-M-;") 'end-of-buffer)
+(global-set-key (kbd "C-'") 'undo)
+(global-unset-key (kbd "C-/"))
+(global-unset-key (kbd "M->"))
+(global-unset-key (kbd "M-<"))
 (define-key global-map
   [remap exchange-point-and-mark] 'my-exchange-point-and-mark-no-activate)
 
@@ -164,6 +188,7 @@
 (defvaralias 'c-basic-offset 'tab-width)
 (c-add-style "my-style"
              '((c-offsets-alist
+                (c . my-handle-comment-indentation)
                 (cpp-macro . 0)
                 (substatement-open . 0)
                 (comment-intro . 0)
@@ -180,11 +205,13 @@
                  (my-c-fix-post-define-class-end
                   +))
                 (template-args-cont . +)
-                (arglist-intro . +)
+                (arglist-intro . *)
                 (inline-open my-indent-oneline-definitions)
                 (defun-open my-indent-oneline-definitions)
                 (arglist-cont-nonempty . *)
-                (arglist-cont . /))))
+                (arglist-close . 0)
+;                (arglist-cont . )
+                (member-init-intro . *))))
 
 (setq-default c-default-style "my-style")
 (add-hook 'c-mode-common-hook 'subword-mode)
@@ -194,14 +221,6 @@
   (lambda() (local-set-key  (kbd "C-c C-.") 'my-tags-apropos)))
 (add-hook 'c-mode-common-hook
   (lambda() (local-set-key  (kbd "C-c C-z") 'recompile)))
-
-
-; Disable electric indent
-(defun my-disable-electric-indentation()
-  "Stop ';', '}', etc. from re-indenting the current line."
-  ;(c-toggle-electric-state -1))
-  )
-(add-hook 'c-mode-common-hook 'my-disable-electric-indentation)
 
 ; Function definitions
 (defun my-mingw-mode ()
@@ -254,7 +273,8 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Consolas" :foundry "outline" :slant normal :weight normal :height 98 :width normal)))))
+ '(default ((t (:family "Consolas" :foundry "outline" :slant normal :weight normal :height 98 :width normal))))
+ '(ebrowse-root-class ((t (:foreground "deep sky blue" :weight bold)))))
 
 ; SSH stuff
 ; ---------
@@ -268,7 +288,10 @@
  ;'(compilation-environment
  ;  (quote
  ;   ("BOOST_ROOT=[[ path to boost ]]")))
- '(vc-git-program "c:/Program Files (x86)/Git/bin/git.exe"))
+ '(package-selected-packages
+   (quote
+    (pyvenv realgud unbound w3m visible-mark sublimity smartscan multiple-cursors monokai-theme matlab-mode magit linum-relative idomenu highlight free-keys folding csharp-mode cmake-mode)))
+ '(vc-git-program "c:\\Program Files (x86)\\Git\\bin\\git.exe"))
 
 ; Enable functions
 (put 'upcase-region 'disabled nil)
